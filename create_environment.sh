@@ -1,51 +1,63 @@
 #!/bin/bash
 
-# Function to display colored output
-print_status() {
-    echo -e "\033[32m[INFO]\033[0m $1"
-}
+#  the submission reminder app
+# first i need to ask for the user's name
 
-print_error() {
-    echo -e "\033[31m[ERROR]\033[0m $1"
-}
+echo "Hello! Let's set up your submission reminder app."
+echo "Please enter your name:"
+read user_name
 
-# Prompt user for their name
-echo "Welcome to the Submission Reminder App Setup!"
-echo "=============================================="
-read -p "Please enter your name: " user_name
-
-# Validate input
-if [[ -z "$user_name" ]]; then
-    print_error "Name cannot be empty. Exiting..."
+# checking if they actually typed something
+if [ -z "$user_name" ]; then
+    echo "Error: You must enter a name!"
     exit 1
 fi
 
-# Create main directory
-main_dir="submission_reminder_${user_name}"
-print_status "Creating main directory: $main_dir"
-
-if [[ -d "$main_dir" ]]; then
-    print_error "Directory $main_dir already exists. Please remove it first or choose a different name."
+# check if the name has spaces thennnn this causes problems
+if [[ "$user_name" =~ [[:space:]] ]]; then
+    echo "Error: Name cannot contain spaces!"
+    echo "Use something like 'ariane' or 'teta' instead of 'ariane itetero'"
     exit 1
 fi
 
-mkdir "$main_dir"
-cd "$main_dir"
+# checkig for weird characters that might break things
+if [[ "$user_name" =~ [^a-zA-Z0-9_] ]]; then
+    echo "Error: Name can only contain letters, numbers and underscore (_)"
+    echo "Avoid special characters like @, #, $, %, etc."
+    exit 1
+fi
 
-# Create subdirectories
-print_status "Creating subdirectories..."
-mkdir -p assets config modules scripts
+# check if directory already exists
+if [ -d "submission_reminder_${user_name}" ]; then
+    echo "Error: Directory submission_reminder_${user_name} already exists!"
+    echo "Choose a different name or delete the existing directory."
+    exit 1
+fi
 
-# Create and populate config.env
-print_status "Creating config/config.env..."
+# now create the main directory with their name
+echo "Creating your app directory... exciting!"
+mkdir "submission_reminder_${user_name}"
+
+# go into this new directory to create everything inside
+cd "submission_reminder_${user_name}"
+
+# create all the folders i need
+echo "Making folders..."
+mkdir app
+mkdir modules
+mkdir assets
+mkdir config
+
+# create the config.env file
+echo "Creating config file..."
 cat > config/config.env << 'EOF'
 # This is the config file
 ASSIGNMENT="Shell Navigation"
 DAYS_REMAINING=2
 EOF
 
-# Create and populate functions.sh
-print_status "Creating modules/functions.sh..."
+# create the functions.sh file - this has the code to check submissions
+echo "Creating functions file..."
 cat > modules/functions.sh << 'EOF'
 #!/bin/bash
 # Function to read submissions file and output students who have not submitted
@@ -66,9 +78,9 @@ function check_submissions {
 }
 EOF
 
-# Create and populate reminder.sh
-print_status "Creating scripts/reminder.sh..."
-cat > scripts/reminder.sh << 'EOF'
+# create the reminder.sh file - this runs the main app logic
+echo "Creating reminder script..."
+cat > app/reminder.sh << 'EOF'
 #!/bin/bash
 # Source environment variables and helper functions
 source ./config/config.env
@@ -84,97 +96,67 @@ echo "--------------------------------------------"
 check_submissions $submissions_file
 EOF
 
-# Create and populate submissions.txt with original data + 5 more students
-print_status "Creating assets/submissions.txt..."
+# create submissions.txt with the original students plus more
+echo "Creating student list..."
 cat > assets/submissions.txt << 'EOF'
 student, assignment, submission status
 Chinemerem, Shell Navigation, not submitted
 Chiagoziem, Git, submitted
 Divine, Shell Navigation, not submitted
 Anissa, Shell Basics, submitted
-Michael, Shell Navigation, not submitted
-Sarah, Git, submitted
-James, Shell Navigation, submitted
-Emily, Shell Basics, not submitted
-David, Shell Navigation, not submitted
-Lisa, Git, not submitted
-Kevin, Shell Basics, submitted
-Rachel, Shell Navigation, not submitted
+Teta, Shell Navigation, not submitted
+Keza, Git, submitted
+Ariane, Shell Navigation, submitted
+Itetero, Shell Basics, not submitted
+Uwimana, Shell Navigation, not submitted
+Mugisha, Git, not submitted
+Uwase, Shell Basics, submitted
+Niyonzima, Shell Navigation, not submitted
 EOF
 
-# Create startup.sh script
-print_status "Creating startup.sh..."
+# create my startup.sh file - this is the main entry point
+echo "Creating startup script..."
 cat > startup.sh << 'EOF'
 #!/bin/bash
 
-# Startup script for Submission Reminder App
-echo "=========================================="
-echo "    Submission Reminder App Starting     "
-echo "=========================================="
-echo ""
+# my startup script for the submission reminder app
+echo "Starting Submission Reminder App..."
 
-# Check if all required files exist
-required_files=("config/config.env" "modules/functions.sh" "scripts/reminder.sh" "assets/submissions.txt")
-missing_files=()
-
-for file in "${required_files[@]}"; do
-    if [[ ! -f "$file" ]]; then
-        missing_files+=("$file")
-    fi
-done
-
-if [[ ${#missing_files[@]} -gt 0 ]]; then
-    echo "ERROR: Missing required files:"
-    for file in "${missing_files[@]}"; do
-        echo "  - $file"
-    done
-    echo "Please ensure all files are in place before running the application."
+# check if all the files exist before running
+if [ ! -f "config/config.env" ]; then
+    echo "Error: Config file missing!"
     exit 1
 fi
 
-# Source configuration
-source ./config/config.env
+if [ ! -f "modules/functions.sh" ]; then
+    echo "Error: Functions file missing!"
+    exit 1
+fi
 
-echo "Configuration loaded:"
-echo "  Assignment: $ASSIGNMENT"
-echo "  Days remaining: $DAYS_REMAINING"
-echo ""
+if [ ! -f "app/reminder.sh" ]; then
+    echo "Error: Reminder script missing!"
+    exit 1
+fi
 
-# Run the reminder script
-echo "Running submission reminder check..."
-echo ""
-bash ./scripts/reminder.sh
+if [ ! -f "assets/submissions.txt" ]; then
+    echo "Error: Student data file missing!"
+    exit 1
+fi
 
-echo ""
-echo "Submission reminder check completed!"
-echo "=========================================="
+# everything looks good, let's run the reminder
+bash ./app/reminder.sh
+
+echo "App finished running!"
 EOF
 
-# Make all .sh files executable
-print_status "Making all .sh files executable..."
-find . -name "*.sh" -type f -exec chmod +x {} \;
+# make all .sh files executable
+echo "Making scripts executable... almost there!"
+chmod +x app/reminder.sh
+chmod +x modules/functions.sh
+chmod +x startup.sh
 
-# Create a simple image placeholder (since we can't create actual images)
-print_status "Creating image placeholder..."
-echo "This is a placeholder for image.png" > image.png
-
-print_status "Environment setup completed successfully!"
-print_status "Directory structure created: $main_dir"
-print_status "All .sh files have been made executable."
-echo ""
-echo "To test the application, navigate to the directory and run:"
-echo "  cd $main_dir"
-echo "  ./startup.sh"
-echo ""
-echo "Directory structure:"
-echo "$main_dir/"
-echo "├── assets/"
-echo "│   └── submissions.txt"
-echo "├── config/"
-echo "│   └── config.env"
-echo "├── modules/"
-echo "│   └── functions.sh"
-echo "├── scripts/"
-echo "│   └── reminder.sh"
-echo "├── image.png"
-echo "└── startup.sh"
+# done!
+echo "Hooray! We did it! Your app is ready to use!"
+echo "To test it, run these commands:"
+echo "cd submission_reminder_${user_name}"
+echo "./startup.sh"

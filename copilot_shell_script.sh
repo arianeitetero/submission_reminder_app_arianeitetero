@@ -1,117 +1,73 @@
 #!/bin/bash
 
-# Function to display colored output
-print_status() {
-    echo -e "\033[32m[INFO]\033[0m $1"
-}
+# my copilot script to change assignment names
+echo "Assignment Changer for Submission Reminder App"
+echo "=============================================="
 
-print_error() {
-    echo -e "\033[31m[ERROR]\033[0m $1"
-}
+# i need to find the submission reminder directory first
+# ill look for any folder that starts with "submission_reminder_"
+app_directory=""
 
-print_warning() {
-    echo -e "\033[33m[WARNING]\033[0m $1"
-}
-
-# Function to find the submission reminder directory
-find_submission_dir() {
-    # Look for directories matching the pattern submission_reminder_*
-    local dirs=(submission_reminder_*)
-    
-    if [[ ${#dirs[@]} -eq 0 || ! -d "${dirs[0]}" ]]; then
-        print_error "No submission reminder directory found!"
-        print_error "Please run create_environment.sh first to set up the application."
-        exit 1
-    elif [[ ${#dirs[@]} -gt 1 ]]; then
-        print_warning "Multiple submission reminder directories found:"
-        for dir in "${dirs[@]}"; do
-            if [[ -d "$dir" ]]; then
-                echo "  - $dir"
-            fi
-        done
-        echo ""
-        read -p "Please enter the directory name to use: " selected_dir
-        if [[ ! -d "$selected_dir" ]]; then
-            print_error "Directory '$selected_dir' does not exist."
-            exit 1
-        fi
-        echo "$selected_dir"
-    else
-        echo "${dirs[0]}"
+for folder in submission_reminder_*; do
+    if [ -d "$folder" ]; then
+        app_directory="$folder"
+        break
     fi
-}
+done
 
-# Main script logic
-echo "============================================="
-echo "    Submission Reminder App - Copilot       "
-echo "============================================="
-echo ""
-
-# Find the submission reminder directory
-app_dir=$(find_submission_dir)
-config_file="$app_dir/config/config.env"
-
-print_status "Using directory: $app_dir"
-
-# Check if config file exists
-if [[ ! -f "$config_file" ]]; then
-    print_error "Configuration file not found: $config_file"
-    print_error "Please ensure the application is properly set up."
+# check if i found a directory
+if [ -z "$app_directory" ]; then
+    echo "I can't find your submission reminder app!"
+    echo "Run create_environment.sh first."
     exit 1
 fi
 
-# Display current assignment
-current_assignment=$(grep "^ASSIGNMENT=" "$config_file" | cut -d'=' -f2 | tr -d '"')
-print_status "Current assignment: $current_assignment"
-echo ""
+echo "Found your app in: $app_directory"
 
-# Prompt for new assignment name
-read -p "Enter the new assignment name: " new_assignment
+# now i need to find the config file
+config_file="$app_directory/config/config.env"
 
-# Validate input
-if [[ -z "$new_assignment" ]]; then
-    print_error "Assignment name cannot be empty. Exiting..."
+# check if the config file exists
+if [ ! -f "$config_file" ]; then
+    echo "I can't find the config file!"
+    echo "Something might be wrong with your app setup."
     exit 1
 fi
 
-print_status "Updating assignment from '$current_assignment' to '$new_assignment'"
+# show the current assignment
+echo "Let me check what assignment is currently set..."
+current_assignment=$(grep "ASSIGNMENT=" "$config_file" | cut -d'=' -f2 | tr -d '"')
+echo "Current assignment: $current_assignment"
 
-# Create backup of config file
-backup_file="${config_file}.backup.$(date +%Y%m%d_%H%M%S)"
-cp "$config_file" "$backup_file"
-print_status "Backup created: $backup_file"
+# ask user for new assignment name
+echo ""
+echo "What assignment do you want to check for?"
+read -p "Enter new assignment name: " new_assignment
 
-# Update the ASSIGNMENT value in config.env using sed
-sed -i "s/^ASSIGNMENT=.*/ASSIGNMENT=\"$new_assignment\"/" "$config_file"
-
-# Verify the change was made
-if grep -q "^ASSIGNMENT=\"$new_assignment\"" "$config_file"; then
-    print_status "Assignment successfully updated to: $new_assignment"
-else
-    print_error "Failed to update assignment. Restoring backup..."
-    cp "$backup_file" "$config_file"
+# make sure they typed something
+if [ -z "$new_assignment" ]; then
+    echo "You didnt enter anything! Try again."
     exit 1
 fi
 
-echo ""
-print_status "Configuration updated successfully!"
-echo ""
+echo "Changing assignment to: $new_assignment"
 
-# Ask if user wants to run the application now
-read -p "Would you like to run the application now to check submissions? (y/n): " run_now
+# use sed to replace the assignment in the config file
+sed -i "s/ASSIGNMENT=.*/ASSIGNMENT=\"$new_assignment\"/" "$config_file"
 
-if [[ "$run_now" =~ ^[Yy]$ ]]; then
-    print_status "Running startup.sh..."
-    echo ""
-    echo "==========================================="
-    cd "$app_dir"
+echo "Assignment updated succesfully!"
+
+# ask if they want to run the app now
+echo ""
+echo "Do you want to check submissions for this new assignment?"
+read -p "Type 'y' for yes or 'n' for no: " answer
+
+if [ "$answer" = "y" ]; then
+    echo "Running the app... here we go!"
+    cd "$app_directory"
     ./startup.sh
-    echo "==========================================="
 else
-    print_status "You can run the application later by executing:"
-    echo "  cd $app_dir"
-    echo "  ./startup.sh"
+    echo "You can run the app later by going to $app_directory and running ./startup.sh"
 fi
 
-echo ""
-print_status "Copilot script completed successfully!"
+echo "Hooray! Copilot mission completed!"
